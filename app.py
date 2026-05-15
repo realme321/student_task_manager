@@ -2,8 +2,10 @@ from flask import Flask, request, jsonify, render_template
 import mysql.connector
 import bcrypt
 from config import DB_CONFIG
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 def get_db():
     return mysql.connector.connect(**DB_CONFIG)
