@@ -54,24 +54,49 @@ def register():
 # LOGIN API  👈 MUST BE HERE
 @app.route('/login', methods=['POST'])
 def login():
-    data = request.json
-    
-    email = data['email']
-    password = data['password']
 
-    db = get_db()
-    cursor = db.cursor(dictionary=True)
+    try:
+        data = request.json
 
-    query = "SELECT * FROM users WHERE email=%s"
-    cursor.execute(query, (email,))
-    
-    user = cursor.fetchone()
+        email = data['email']
+        password = data['password']
 
-    if user and bcrypt.checkpw(password.encode('utf-8'), user['password'].encode('utf-8')):
-        return jsonify({"message": "Login successful", "user": user})
-    else:
-        return jsonify({"message": "Invalid email or password"}), 401
-    
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+
+        query = "SELECT * FROM users WHERE email=%s"
+
+        cursor.execute(query, (email,))
+
+        user = cursor.fetchone()
+
+        cursor.close()
+        db.close()
+
+        if user and bcrypt.checkpw(
+            password.encode('utf-8'),
+            user['password'].encode('utf-8')
+        ):
+
+            return jsonify({
+                "message": "Login successful",
+                "user": {
+                    "id": user['id'],
+                    "name": user['name'],
+                    "email": user['email']
+                }
+            })
+
+        return jsonify({
+            "message": "Invalid email or password"
+        }), 401
+
+    except Exception as e:
+        print("LOGIN ERROR:", e)
+
+        return jsonify({
+            "error": str(e)
+        }), 500
  # ADD TASK API
 @app.route('/add_task', methods=['POST'])
 def add_task():
