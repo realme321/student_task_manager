@@ -5,7 +5,9 @@ from config import DB_CONFIG
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=[
+    "https://student-task-manager-mr58.onrender.com"
+])
 
 def get_db():
     return mysql.connector.connect(**DB_CONFIG)
