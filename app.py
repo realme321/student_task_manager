@@ -6,7 +6,7 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app, origins=[
-    "https://student-task-manager-mr58.onrender.com", "https://student-task-api.onrender.com/register"
+    "https://student-task-manager-mr58.onrender.com"
 ])
 
 def get_db():
