@@ -1,7 +1,7 @@
 DB_CONFIG ={
-    'host':'yamanote.proxy.rlwy.net:27600/railway',
+    'host':'yamanote.proxy.rlwy.net',
     'user':'root',
     'password':'pCTktxQLRyfpjCGhNWdLZusjLMGpGFOi',
     'database':'railway',
-    'port':3306
+    'port':27600
 }
