@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask, request, jsonify, render_template
 import mysql.connector
 import bcrypt
@@ -6,23 +8,7 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 
-# Explicitly allow your frontend origin and standard methods
-from flask_cors import CORS
-
-app = Flask(__name__)
-
-CORS(
-    app,
-    supports_credentials=True,
-    resources={r"/*": {"origins": "*"}}
-)
-
-@app.after_request
-def after_request(response):
-    response.headers.add("Access-Control-Allow-Origin", "*")
-    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
-    response.headers.add("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
-    return response
+CORS(app)
 
 def get_db():
     return mysql.connector.connect(**DB_CONFIG)
@@ -189,4 +175,7 @@ def dashboard():
 # ALWAYS LAST
 if __name__ == '__main__':
     print(app.url_map)
-    app.run(debug=True)
+    app.run(
+        host='0.0.0.0',
+        port=int(os.environ.get("PORT", 5000))
+    )

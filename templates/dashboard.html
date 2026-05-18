@@ -139,7 +139,7 @@
       let user_id = localStorage.getItem("user_id");
 
       function addTask() {
-        fetch("http://127.0.0.1:5000/add_task", {
+        fetch("https://student-task-manager-mr58.onrender.com/add_task", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
