@@ -5,13 +5,23 @@ from config import DB_CONFIG
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
+
+# Explicitly allow your frontend origin and standard methods
+from flask_cors import CORS
+
+app = Flask(__name__)
+
+CORS(
+    app,
+    supports_credentials=True,
+    resources={r"/*": {"origins": "*"}}
+)
 
 @app.after_request
-def add_cors_headers(response):
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+def after_request(response):
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
+    response.headers.add("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
     return response
 
 def get_db():
@@ -25,28 +35,23 @@ def home():
 @app.route('/register', methods=['POST', 'OPTIONS'])
 def register():
     if request.method == 'OPTIONS':
-        return '', 204
+        return jsonify({"message": "OK"}), 200
     try:
-        data = request.json
+        data = request.get_json()
         name = data['name']
         email = data['email']
         password = data['password']
-       
+
         hashed_password = bcrypt.hashpw(
             password.encode('utf-8'),
             bcrypt.gensalt()
         ).decode('utf-8')
 
-        db = get_db()
-        cursor = db.cursor()
-
-        query = """
-        INSERT INTO users (name, email, password)
-        VALUES (%s, %s, %s)
-        """
-
-        cursor.execute(query, (name, email, hashed_password))
-        db.commit()
+        with get_db() as db:
+            with db.cursor() as cursor:
+                query = "INSERT INTO users (name, email, password) VALUES (%s, %s, %s)"
+                cursor.execute(query, (name, email, hashed_password))
+                db.commit()
 
         return jsonify({"message": "User registered successfully"})
 
@@ -59,27 +64,23 @@ def register():
         return jsonify({
             "message": str(e)
         }), 500
+
 # LOGIN API  👈 MUST BE HERE
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['POST', 'OPTIONS'])
 def login():
+    if request.method == 'OPTIONS':
+        return jsonify({"message": "OK"}), 200
 
     try:
-        data = request.json
-
+        data = request.get_json()
         email = data['email']
         password = data['password']
 
-        db = get_db()
-        cursor = db.cursor(dictionary=True)
-
-        query = "SELECT * FROM users WHERE email=%s"
-
-        cursor.execute(query, (email,))
-
-        user = cursor.fetchone()
-
-        cursor.close()
-        db.close()
+        with get_db() as db:
+            with db.cursor(dictionary=True) as cursor:
+                query = "SELECT * FROM users WHERE email=%s"
+                cursor.execute(query, (email,))
+                user = cursor.fetchone()
 
         if user and bcrypt.checkpw(
             password.encode('utf-8'),
@@ -106,68 +107,72 @@ def login():
             "error": str(e)
         }), 500
  # ADD TASK API
-@app.route('/add_task', methods=['POST'])
+@app.route('/add_task', methods=['POST', 'OPTIONS'])
 def add_task():
-    data = request.json
+    if request.method == 'OPTIONS':
+        return jsonify({"message": "OK"}), 200
+    try:
+        data = request.get_json()
+        user_id = data['user_id']
+        task_title = data['task_title']
+        description = data['description']
+        due_date = data['due_date']
 
-    user_id = data['user_id']
-    task_title = data['task_title']
-    description = data['description']
-    due_date = data['due_date']
-
-    db = get_db()
-    cursor = db.cursor()
-
-    query = """
-    INSERT INTO tasks (user_id, task_title, description, due_date)
-    VALUES (%s, %s, %s, %s)
-    """
-
-    cursor.execute(query, (user_id, task_title, description, due_date))
-    db.commit()
-
-    return jsonify({"message": "Task added successfully"})
+        with get_db() as db:
+            with db.cursor() as cursor:
+                query = "INSERT INTO tasks (user_id, task_title, description, due_date) VALUES (%s, %s, %s, %s)"
+                cursor.execute(query, (user_id, task_title, description, due_date))
+                db.commit()
+                return jsonify({"message": "Task added successfully"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # GET TASKS API
 @app.route('/get_tasks/<int:user_id>', methods=['GET'])
 def get_tasks(user_id):
-    db = get_db()
-    cursor = db.cursor(dictionary=True)
-
-    query = "SELECT * FROM tasks WHERE user_id=%s"
-    cursor.execute(query, (user_id,))
-
-    tasks = cursor.fetchall()
-
-    return jsonify(tasks)
+    try:
+        with get_db() as db:
+            with db.cursor(dictionary=True) as cursor:
+                query = "SELECT * FROM tasks WHERE user_id=%s"
+                cursor.execute(query, (user_id,))
+                tasks = cursor.fetchall()
+                return jsonify(tasks)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # UPDATE TASK STATUS
-@app.route('/update_task/<int:task_id>', methods=['PUT'])
+@app.route('/update_task/<int:task_id>', methods=['PUT', 'OPTIONS'])
+ 
 def update_task(task_id):
-    data = request.json
-    status = data['status']
+    if request.method == 'OPTIONS':
+        return jsonify({"message": "OK"}), 200
+    try:
+        data = request.get_json()
+        status = data['status']
 
-    db = get_db()
-    cursor = db.cursor()
-
-    query = "UPDATE tasks SET status=%s WHERE id=%s"
-    cursor.execute(query, (status, task_id))
-    db.commit()
-
-    return jsonify({"message": "Task updated successfully"})
+        with get_db() as db:
+            with db.cursor() as cursor:
+                query = "UPDATE tasks SET status=%s WHERE id=%s"
+                cursor.execute(query, (status, task_id))
+                db.commit()
+                return jsonify({"message": "Task updated successfully"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # DELETE TASK API
-@app.route('/delete_task/<int:task_id>', methods=['DELETE'])
+@app.route('/delete_task/<int:task_id>', methods=['DELETE', 'OPTIONS'])
 def delete_task(task_id):
-    db = get_db()
-    cursor = db.cursor()
-
-    query = "DELETE FROM tasks WHERE id=%s"
-    cursor.execute(query, (task_id,))
-    db.commit()
-
-    return jsonify({"message": "Task deleted successfully"})
-
+    if request.method == 'OPTIONS':
+        return jsonify({"message": "OK"}), 200
+    try:
+        with get_db() as db:
+            with db.cursor() as cursor:
+                query = "DELETE FROM tasks WHERE id=%s"
+                cursor.execute(query, (task_id,))
+                db.commit()
+                return jsonify({"message": "Task deleted successfully"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/register_page')
 def register_page():
